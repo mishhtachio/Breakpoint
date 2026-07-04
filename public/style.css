@@ -1,0 +1,188 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+  margin: 0;
+  padding: 20px;
+}
+
+header {
+  border-bottom: 1px solid #45475a;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+
+h1 {
+  margin: 0 0 15px 0;
+  color: #cdd6f4;
+}
+
+.repo-config {
+  display: flex;
+  gap: 10px;
+  max-width: 800px;
+}
+
+input[type="text"] {
+  flex-grow: 1;
+  padding: 10px;
+  border-radius: 4px;
+  border: 1px solid #45475a;
+  background-color: #313244;
+  color: #cdd6f4;
+  font-size: 14px;
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: #89b4fa;
+}
+
+button {
+  padding: 10px 20px;
+  border-radius: 4px;
+  border: none;
+  background-color: #89b4fa;
+  color: #11111b;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+  transition: opacity 0.2s;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+button:disabled {
+  background-color: #585b70;
+  color: #a6adc8;
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.info-message {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #bac2de;
+}
+
+.container {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+}
+
+.panel {
+  background-color: #252538;
+  border-radius: 6px;
+  padding: 20px;
+  border: 1px solid #313244;
+}
+
+h2, h3 {
+  margin-top: 0;
+  color: #cdd6f4;
+}
+
+.placeholder-text {
+  color: #7f849c;
+  font-style: italic;
+}
+
+/* Left Panel: Workflow Explorer */
+.workflow-item {
+  margin-bottom: 20px;
+}
+
+.workflow-filename {
+  font-weight: bold;
+  color: #b4befe;
+  font-size: 15px;
+  margin-bottom: 8px;
+}
+
+.job-item {
+  padding: 8px 12px;
+  background-color: #313244;
+  border-radius: 4px;
+  margin-bottom: 5px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.job-item:hover {
+  background-color: #45475a;
+}
+
+.job-item.selected {
+  background-color: #585b70;
+  border-left: 3px solid #89b4fa;
+}
+
+/* Right Panel: Run details and steps */
+.run-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #313244;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
+.steps-container {
+  margin-bottom: 20px;
+}
+
+.steps-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  border-bottom: 1px solid #313244;
+}
+
+.step-badge {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+/* Status colors */
+.badge-pending { background-color: #585b70; }
+.badge-running { background-color: #f9e2af; }
+.badge-success { background-color: #a6e3a1; }
+.badge-failed { background-color: #f38ba8; }
+
+.step-name {
+  flex-grow: 1;
+  font-size: 14px;
+}
+
+/* Terminal logs block */
+.terminal-container {
+  display: flex;
+  flex-direction: column;
+}
+
+#logsTerminal {
+  background-color: #11111b;
+  color: #a6e3a1;
+  padding: 15px;
+  border-radius: 4px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  overflow-y: auto;
+  max-height: 400px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  margin: 0;
+  border: 1px solid #313244;
+}
