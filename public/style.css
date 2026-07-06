@@ -136,23 +136,46 @@ h2, h3 {
 
 .steps-list {
   list-style: none;
-  padding: 0;
-  margin: 0;
+  padding: 0 0 0 15px;
+  margin: 10px 0 20px 10px;
+  border-left: 2px dashed #45475a;
+  position: relative;
 }
 
 .step-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 0;
-  border-bottom: 1px solid #313244;
+  gap: 12px;
+  padding: 10px 15px;
+  background-color: #2b2b3d;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.step-item:hover {
+  background-color: #35354a;
+  border-color: #45475a;
+}
+
+.step-item.active-step {
+  background-color: #3e3e56;
+  border-color: #89b4fa;
+  box-shadow: 0 0 8px rgba(137, 180, 250, 0.15);
 }
 
 .step-badge {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  display: inline-block;
+  position: absolute;
+  left: -24px;
+  background-color: #585b70;
+  border: 3px solid #1e1e2e;
+  z-index: 1;
 }
 
 /* Status colors */
@@ -164,12 +187,54 @@ h2, h3 {
 .step-name {
   flex-grow: 1;
   font-size: 14px;
+  color: #cdd6f4;
+}
+
+.step-duration {
+  font-size: 11px;
+  color: #a6adc8;
+  background-color: #1e1e2e;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
 }
 
 /* Terminal logs block */
 .terminal-container {
   display: flex;
   flex-direction: column;
+}
+
+.terminal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.terminal-header h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+#logFilterLabel {
+  color: #89b4fa;
+  font-weight: bold;
+}
+
+.btn-small {
+  padding: 4px 10px;
+  font-size: 12px;
+  background-color: #313244;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.btn-small:hover {
+  background-color: #45475a;
+  color: #ffffff;
 }
 
 #logsTerminal {

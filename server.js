@@ -134,7 +134,9 @@ function runStepCommand(containerName, command, onLog) {
       if (code === 0) {
         resolve();
       } else {
-        reject(new Error(`Command exited with code ${code}`));
+        const error = new Error(`Command exited with code ${code}`);
+        error.code = code;
+        reject(error);
       }
     });
 
@@ -239,20 +241,24 @@ wss.on('connection', (ws) => {
             if (step.uses) {
               // Simulated Step (actions/checkout, etc.)
               ws.send(JSON.stringify({ type: 'step_log', jobId, stepId: step.id, data: `[LocalRunner Info] Simulated action '${step.uses}'. Workspace is already mounted.\n` }));
-              ws.send(JSON.stringify({ type: 'step_end', jobId, stepId: step.id, status: 'success' }));
+              ws.send(JSON.stringify({ type: 'step_end', jobId, stepId: step.id, status: 'success', duration: '0.0s', exitCode: 0 }));
               continue;
             }
 
             if (step.run) {
+              const startTime = Date.now();
               try {
                 ws.send(JSON.stringify({ type: 'step_log', jobId, stepId: step.id, data: `$ ${step.run}\n` }));
                 await runStepCommand(containerName, step.run, (logData) => {
                   ws.send(JSON.stringify({ type: 'step_log', jobId, stepId: step.id, data: logData }));
                 });
-                ws.send(JSON.stringify({ type: 'step_end', jobId, stepId: step.id, status: 'success' }));
+                const duration = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+                ws.send(JSON.stringify({ type: 'step_end', jobId, stepId: step.id, status: 'success', duration, exitCode: 0 }));
               } catch (stepErr) {
+                const duration = ((Date.now() - startTime) / 1000).toFixed(1) + 's';
+                const exitCode = stepErr.code !== undefined ? stepErr.code : 1;
                 ws.send(JSON.stringify({ type: 'step_log', jobId, stepId: step.id, data: `\n[Error] Step failed: ${stepErr.message}\n` }));
-                ws.send(JSON.stringify({ type: 'step_end', jobId, stepId: step.id, status: 'failed' }));
+                ws.send(JSON.stringify({ type: 'step_end', jobId, stepId: step.id, status: 'failed', duration, exitCode }));
                 jobSuccess = false;
                 break; // Stop running further steps
               }

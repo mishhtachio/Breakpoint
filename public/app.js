@@ -3,6 +3,9 @@ let activeRepoPath = '';
 let selectedWorkflowFile = '';
 let selectedJob = null;
 let ws = null;
+let stepLogs = {};
+let combinedLogs = '';
+let activeFilterStepId = null;
 
 // UI Elements
 const repoPathInput = document.getElementById('repoPathInput');
@@ -13,6 +16,8 @@ const activeJobTitle = document.getElementById('activeJobTitle');
 const runJobBtn = document.getElementById('runJobBtn');
 const stepsList = document.getElementById('stepsList');
 const logsTerminal = document.getElementById('logsTerminal');
+const logFilterLabel = document.getElementById('logFilterLabel');
+const showAllLogsBtn = document.getElementById('showAllLogsBtn');
 
 // Initial setup
 window.addEventListener('DOMContentLoaded', async () => {
@@ -130,6 +135,7 @@ function selectJob(filename, job, jobElement) {
     const li = document.createElement('li');
     li.className = 'step-item';
     li.id = `step-node-${step.id}`;
+    li.addEventListener('click', () => filterLogsByStep(step.id, step.name));
 
     const badge = document.createElement('span');
     badge.className = 'step-badge badge-pending';
@@ -139,28 +145,77 @@ function selectJob(filename, job, jobElement) {
     name.className = 'step-name';
     name.textContent = step.name;
 
+    const durationSpan = document.createElement('span');
+    durationSpan.className = 'step-duration';
+    durationSpan.id = `step-duration-${step.id}`;
+
     li.appendChild(badge);
     li.appendChild(name);
+    li.appendChild(durationSpan);
     stepsList.appendChild(li);
   });
 
   // Reset logs view
+  stepLogs = {};
+  combinedLogs = '';
+  activeFilterStepId = null;
+  logFilterLabel.textContent = 'All Steps';
   logsTerminal.textContent = 'Ready to execute. Click Run Job above.';
 }
+
+// Helper: update terminal text content based on current log filters
+function updateLogsView(incomingStepId = null) {
+  if (activeFilterStepId === null) {
+    logsTerminal.textContent = combinedLogs;
+    logsTerminal.scrollTop = logsTerminal.scrollHeight;
+  } else if (incomingStepId === activeFilterStepId || incomingStepId === null) {
+    logsTerminal.textContent = stepLogs[activeFilterStepId] || 'No logs for this step yet.';
+    logsTerminal.scrollTop = logsTerminal.scrollHeight;
+  }
+}
+
+function filterLogsByStep(stepId, stepName) {
+  activeFilterStepId = stepId;
+  logFilterLabel.textContent = stepName;
+  
+  document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active-step'));
+  const activeLi = document.getElementById(`step-node-${stepId}`);
+  if (activeLi) {
+    activeLi.classList.add('active-step');
+  }
+  
+  updateLogsView();
+}
+
+showAllLogsBtn.addEventListener('click', () => {
+  activeFilterStepId = null;
+  logFilterLabel.textContent = 'All Steps';
+  document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active-step'));
+  updateLogsView();
+});
 
 // Trigger job execution via WebSockets
 runJobBtn.addEventListener('click', () => {
   if (!selectedJob || !selectedWorkflowFile) return;
 
-  // Reset steps status to pending
+  // Reset steps status and durations in UI
   selectedJob.steps.forEach(step => {
     const badge = document.getElementById(`step-badge-${step.id}`);
     if (badge) {
       badge.className = 'step-badge badge-pending';
     }
+    const durationSpan = document.getElementById(`step-duration-${step.id}`);
+    if (durationSpan) {
+      durationSpan.textContent = '';
+    }
   });
 
-  logsTerminal.textContent = 'Connecting to runner...\n';
+  // Clear logs state
+  stepLogs = {};
+  combinedLogs = 'Connecting to runner...\n';
+  activeFilterStepId = null;
+  updateLogsView();
+
   runJobBtn.setAttribute('disabled', 'true');
   repoPathInput.setAttribute('disabled', 'true');
   loadWorkflowsBtn.setAttribute('disabled', 'true');
@@ -171,7 +226,8 @@ runJobBtn.addEventListener('click', () => {
   ws = new WebSocket(wsUrl);
 
   ws.onopen = () => {
-    logsTerminal.textContent += 'Connected. Initializing run...\n';
+    combinedLogs += 'Connected. Initializing run...\n';
+    updateLogsView();
     ws.send(JSON.stringify({
       type: 'run_job',
       workflowFile: selectedWorkflowFile,
@@ -185,10 +241,13 @@ runJobBtn.addEventListener('click', () => {
 
       switch (msg.type) {
         case 'job_start':
-          logsTerminal.textContent += `[LocalRunner] Starting job: ${msg.jobId}\n`;
+          combinedLogs += `[LocalRunner] Starting job: ${msg.jobId}\n`;
+          stepLogs['setup'] = `[LocalRunner] Starting job: ${msg.jobId}\n`;
+          updateLogsView();
           break;
 
         case 'step_start':
+          stepLogs[msg.stepId] = '';
           const startBadge = document.getElementById(`step-badge-${msg.stepId}`);
           if (startBadge) {
             startBadge.className = 'step-badge badge-running';
@@ -196,8 +255,10 @@ runJobBtn.addEventListener('click', () => {
           break;
 
         case 'step_log':
-          logsTerminal.textContent += msg.data;
-          logsTerminal.scrollTop = logsTerminal.scrollHeight;
+          const targetId = msg.stepId || 'setup';
+          stepLogs[targetId] = (stepLogs[targetId] || '') + msg.data;
+          combinedLogs += msg.data;
+          updateLogsView(targetId);
           break;
 
         case 'step_end':
@@ -205,17 +266,25 @@ runJobBtn.addEventListener('click', () => {
           if (endBadge) {
             endBadge.className = `step-badge badge-${msg.status}`;
           }
+          const durationSpan = document.getElementById(`step-duration-${msg.stepId}`);
+          if (durationSpan && msg.duration) {
+            durationSpan.textContent = msg.duration;
+            if (msg.exitCode !== undefined && msg.exitCode !== 0) {
+              durationSpan.textContent += ` (exit: ${msg.exitCode})`;
+            }
+          }
           break;
 
         case 'job_end':
-          logsTerminal.textContent += `\n[LocalRunner] Job finished with status: ${msg.status.toUpperCase()}\n`;
-          logsTerminal.scrollTop = logsTerminal.scrollHeight;
+          combinedLogs += `\n[LocalRunner] Job finished with status: ${msg.status.toUpperCase()}\n`;
+          stepLogs['cleanup'] = (stepLogs['cleanup'] || '') + `\n[LocalRunner] Job finished with status: ${msg.status.toUpperCase()}\n`;
+          updateLogsView();
           cleanupRun();
           break;
 
         case 'error':
-          logsTerminal.textContent += `\n[Error] ${msg.message}\n`;
-          logsTerminal.scrollTop = logsTerminal.scrollHeight;
+          combinedLogs += `\n[Error] ${msg.message}\n`;
+          updateLogsView();
           cleanupRun();
           break;
       }
