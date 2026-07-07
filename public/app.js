@@ -18,6 +18,9 @@ const stepsList = document.getElementById('stepsList');
 const logsTerminal = document.getElementById('logsTerminal');
 const logFilterLabel = document.getElementById('logFilterLabel');
 const showAllLogsBtn = document.getElementById('showAllLogsBtn');
+const runStepBtn = document.getElementById('runStepBtn');
+const runUntilBtn = document.getElementById('runUntilBtn');
+const runFromBtn = document.getElementById('runFromBtn');
 
 // Initial setup
 window.addEventListener('DOMContentLoaded', async () => {
@@ -160,6 +163,12 @@ function selectJob(filename, job, jobElement) {
   combinedLogs = '';
   activeFilterStepId = null;
   logFilterLabel.textContent = 'All Steps';
+  
+  // Disable scoped run buttons
+  runStepBtn.setAttribute('disabled', 'true');
+  runUntilBtn.setAttribute('disabled', 'true');
+  runFromBtn.setAttribute('disabled', 'true');
+  
   logsTerminal.textContent = 'Ready to execute. Click Run Job above.';
 }
 
@@ -183,6 +192,13 @@ function filterLogsByStep(stepId, stepName) {
   if (activeLi) {
     activeLi.classList.add('active-step');
   }
+
+  // Enable step execution buttons
+  if (ws === null) {
+    runStepBtn.removeAttribute('disabled');
+    runUntilBtn.removeAttribute('disabled');
+    runFromBtn.removeAttribute('disabled');
+  }
   
   updateLogsView();
 }
@@ -191,15 +207,38 @@ showAllLogsBtn.addEventListener('click', () => {
   activeFilterStepId = null;
   logFilterLabel.textContent = 'All Steps';
   document.querySelectorAll('.step-item').forEach(el => el.classList.remove('active-step'));
+  
+  // Disable step buttons since no step is selected
+  runStepBtn.setAttribute('disabled', 'true');
+  runUntilBtn.setAttribute('disabled', 'true');
+  runFromBtn.setAttribute('disabled', 'true');
+  
   updateLogsView();
 });
 
-// Trigger job execution via WebSockets
-runJobBtn.addEventListener('click', () => {
+// Trigger scoped or standard job execution
+function startJobExecution(runMode = 'all') {
   if (!selectedJob || !selectedWorkflowFile) return;
 
-  // Reset steps status and durations in UI
-  selectedJob.steps.forEach(step => {
+  const targetStepId = activeFilterStepId;
+  let targetSteps = selectedJob.steps;
+
+  // Filter which steps will run to reset their visual status
+  if (runMode && targetStepId) {
+    const idx = selectedJob.steps.findIndex(s => s.id === targetStepId);
+    if (idx !== -1) {
+      if (runMode === 'step') {
+        targetSteps = [selectedJob.steps[idx]];
+      } else if (runMode === 'until') {
+        targetSteps = selectedJob.steps.slice(0, idx + 1);
+      } else if (runMode === 'from') {
+        targetSteps = selectedJob.steps.slice(idx);
+      }
+    }
+  }
+
+  // Reset steps status and durations in UI for steps that will be run
+  targetSteps.forEach(step => {
     const badge = document.getElementById(`step-badge-${step.id}`);
     if (badge) {
       badge.className = 'step-badge badge-pending';
@@ -213,14 +252,16 @@ runJobBtn.addEventListener('click', () => {
   // Clear logs state
   stepLogs = {};
   combinedLogs = 'Connecting to runner...\n';
-  activeFilterStepId = null;
   updateLogsView();
 
+  // Disable UI controls
   runJobBtn.setAttribute('disabled', 'true');
+  runStepBtn.setAttribute('disabled', 'true');
+  runUntilBtn.setAttribute('disabled', 'true');
+  runFromBtn.setAttribute('disabled', 'true');
   repoPathInput.setAttribute('disabled', 'true');
   loadWorkflowsBtn.setAttribute('disabled', 'true');
 
-  // Determine WebSocket protocol (ws or wss)
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${window.location.host}`;
   ws = new WebSocket(wsUrl);
@@ -231,7 +272,9 @@ runJobBtn.addEventListener('click', () => {
     ws.send(JSON.stringify({
       type: 'run_job',
       workflowFile: selectedWorkflowFile,
-      jobId: selectedJob.id
+      jobId: selectedJob.id,
+      runMode: runMode,
+      targetStepId: targetStepId
     }));
   };
 
@@ -294,18 +337,34 @@ runJobBtn.addEventListener('click', () => {
   };
 
   ws.onerror = (err) => {
-    logsTerminal.textContent += `\n[WebSocket Error] Connection issue.`;
+    combinedLogs += `\n[WebSocket Error] Connection issue.`;
+    updateLogsView();
     cleanupRun();
   };
 
   ws.onclose = () => {
-    logsTerminal.textContent += `\n[WebSocket] Connection closed.`;
+    combinedLogs += `\n[WebSocket] Connection closed.`;
+    updateLogsView();
     cleanupRun();
   };
-});
+}
+
+// Bind event listeners for execution buttons
+runJobBtn.addEventListener('click', () => startJobExecution('all'));
+runStepBtn.addEventListener('click', () => startJobExecution('step'));
+runUntilBtn.addEventListener('click', () => startJobExecution('until'));
+runFromBtn.addEventListener('click', () => startJobExecution('from'));
 
 function cleanupRun() {
   runJobBtn.removeAttribute('disabled');
+  
+  // Re-enable step-level buttons only if a step remains selected
+  if (activeFilterStepId) {
+    runStepBtn.removeAttribute('disabled');
+    runUntilBtn.removeAttribute('disabled');
+    runFromBtn.removeAttribute('disabled');
+  }
+  
   repoPathInput.removeAttribute('disabled');
   loadWorkflowsBtn.removeAttribute('disabled');
   if (ws) {

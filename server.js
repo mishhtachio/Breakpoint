@@ -162,7 +162,7 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(message);
 
       if (data.type === 'run_job') {
-        const { workflowFile, jobId } = data;
+        const { workflowFile, jobId, runMode, targetStepId } = data;
 
         if (!activeRepoPath) {
           ws.send(JSON.stringify({ type: 'error', message: 'No repository is configured.' }));
@@ -187,12 +187,26 @@ wss.on('connection', (ws) => {
         }
 
         // Extract steps
-        const steps = (jobData.steps || []).map((step, idx) => ({
+        let steps = (jobData.steps || []).map((step, idx) => ({
           id: step.id || `step-${idx + 1}`,
           name: step.name || step.run || step.uses || `Step ${idx + 1}`,
           run: step.run || null,
           uses: step.uses || null
         }));
+
+        // Filter steps based on runMode (Phase 3 Step Runner)
+        if (runMode && targetStepId) {
+          const idx = steps.findIndex(s => s.id === targetStepId);
+          if (idx !== -1) {
+            if (runMode === 'step') {
+              steps = [steps[idx]];
+            } else if (runMode === 'until') {
+              steps = steps.slice(0, idx + 1);
+            } else if (runMode === 'from') {
+              steps = steps.slice(idx);
+            }
+          }
+        }
 
         // Docker container setup
         const timestamp = Date.now();
