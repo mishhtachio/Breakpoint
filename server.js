@@ -162,7 +162,7 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(message);
 
       if (data.type === 'run_job') {
-        const { workflowFile, jobId, runMode, targetStepId } = data;
+        const { workflowFile, jobId, runMode, targetStepId, breakpoints } = data;
 
         if (!activeRepoPath) {
           ws.send(JSON.stringify({ type: 'error', message: 'No repository is configured.' }));
