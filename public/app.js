@@ -106,7 +106,10 @@ async function loadWorkflows() {
           const jobItem = document.createElement('div');
           jobItem.className = 'job-item';
           jobItem.textContent = job.name || job.id;
-          jobItem.addEventListener('click', () => selectJob(wf.filename, job, jobItem));
+          jobItem.addEventListener('click', () => {
+            if (ws !== null) return; // Prevent changing jobs during active run
+            selectJob(wf.filename, job, jobItem);
+          });
           wfItem.appendChild(jobItem);
         });
       }
