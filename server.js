@@ -252,6 +252,7 @@ wss.on('connection', (ws) => {
             }
 
             const step = steps[i];
+            executionState.currentStepId = step.id; // Track currently executing step ID
 
             // Breakpoint check (Phase 4 Pausing)
             if (executionState.breakpoints.includes(step.id)) {
@@ -306,6 +307,34 @@ wss.on('connection', (ws) => {
         const execution = activeExecutions.get(ws);
         if (execution && execution.resolveResume) {
           execution.resolveResume();
+        }
+      } else if (data.type === 'exec_cmd') {
+        const execution = activeExecutions.get(ws);
+        if (execution && execution.resolveResume) {
+          const { cmd } = data;
+          const containerName = execution.containerName;
+          const targetId = execution.currentStepId || 'debug';
+          
+          const proc = spawn('docker', ['exec', '-i', containerName, 'sh', '-c', cmd]);
+          
+          proc.stdout.on('data', (logData) => {
+            ws.send(JSON.stringify({ type: 'step_log', jobId: execution.jobId || '', stepId: targetId, data: logData.toString() }));
+          });
+          
+          proc.stderr.on('data', (logData) => {
+            ws.send(JSON.stringify({ type: 'step_log', jobId: execution.jobId || '', stepId: targetId, data: logData.toString() }));
+          });
+          
+          proc.on('close', (code) => {
+            ws.send(JSON.stringify({ type: 'cmd_end', exitCode: code }));
+          });
+          
+          proc.on('error', (err) => {
+            ws.send(JSON.stringify({ type: 'step_log', jobId: execution.jobId || '', stepId: targetId, data: `[Error] ${err.message}\n` }));
+            ws.send(JSON.stringify({ type: 'cmd_end', exitCode: 1 }));
+          });
+        } else {
+          ws.send(JSON.stringify({ type: 'error', message: 'Runner is not paused or container is not active.' }));
         }
       }
     } catch (err) {
