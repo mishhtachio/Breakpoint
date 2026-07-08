@@ -282,3 +282,25 @@ h2, h3 {
   margin: 0;
   border: 1px solid #313244;
 }
+
+/* Breakpoint indicator styling (Phase 4) */
+.breakpoint-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #585b70;
+  cursor: pointer;
+  display: inline-block;
+  transition: all 0.2s ease;
+  margin-right: 2px;
+}
+
+.breakpoint-indicator:hover {
+  border-color: #f38ba8;
+  background-color: rgba(243, 139, 168, 0.2);
+}
+
+.breakpoint-indicator.has-breakpoint {
+  border-color: #f38ba8;
+  background-color: #f38ba8;
+}

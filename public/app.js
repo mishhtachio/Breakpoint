@@ -6,6 +6,7 @@ let ws = null;
 let stepLogs = {};
 let combinedLogs = '';
 let activeFilterStepId = null;
+let activeBreakpoints = new Set();
 
 // UI Elements
 const repoPathInput = document.getElementById('repoPathInput');
@@ -143,6 +144,18 @@ function selectJob(filename, job, jobElement) {
     li.id = `step-node-${step.id}`;
     li.addEventListener('click', () => filterLogsByStep(step.id, step.name));
 
+    // Breakpoint Indicator
+    const bpIndicator = document.createElement('span');
+    bpIndicator.className = 'breakpoint-indicator';
+    bpIndicator.id = `step-bp-${step.id}`;
+    if (activeBreakpoints.has(step.id)) {
+      bpIndicator.classList.add('has-breakpoint');
+    }
+    bpIndicator.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleBreakpoint(step.id);
+    });
+
     const badge = document.createElement('span');
     badge.className = 'step-badge badge-pending';
     badge.id = `step-badge-${step.id}`;
@@ -155,17 +168,19 @@ function selectJob(filename, job, jobElement) {
     durationSpan.className = 'step-duration';
     durationSpan.id = `step-duration-${step.id}`;
 
+    li.appendChild(bpIndicator);
     li.appendChild(badge);
     li.appendChild(name);
     li.appendChild(durationSpan);
     stepsList.appendChild(li);
   });
 
-  // Reset logs view
+  // Reset logs view and breakpoints
   stepLogs = {};
   combinedLogs = '';
   activeFilterStepId = null;
   logFilterLabel.textContent = 'All Steps';
+  activeBreakpoints.clear();
   
   // Disable scoped run buttons
   runStepBtn.setAttribute('disabled', 'true');
@@ -173,6 +188,17 @@ function selectJob(filename, job, jobElement) {
   runFromBtn.setAttribute('disabled', 'true');
   
   logsTerminal.textContent = 'Ready to execute. Click Run Job above.';
+}
+
+function toggleBreakpoint(stepId) {
+  const el = document.getElementById(`step-bp-${stepId}`);
+  if (activeBreakpoints.has(stepId)) {
+    activeBreakpoints.delete(stepId);
+    if (el) el.classList.remove('has-breakpoint');
+  } else {
+    activeBreakpoints.add(stepId);
+    if (el) el.classList.add('has-breakpoint');
+  }
 }
 
 // Helper: update terminal text content based on current log filters
@@ -277,7 +303,8 @@ function startJobExecution(runMode = 'all') {
       workflowFile: selectedWorkflowFile,
       jobId: selectedJob.id,
       runMode: runMode,
-      targetStepId: targetStepId
+      targetStepId: targetStepId,
+      breakpoints: Array.from(activeBreakpoints)
     }));
   };
 

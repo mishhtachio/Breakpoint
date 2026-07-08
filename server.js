@@ -218,7 +218,9 @@ wss.on('connection', (ws) => {
           containerName,
           steps,
           currentStepIndex: 0,
-          status: 'running'
+          status: 'running',
+          breakpoints: breakpoints || [],
+          resolveResume: null
         };
         activeExecutions.set(ws, executionState);
 
@@ -250,6 +252,16 @@ wss.on('connection', (ws) => {
             }
 
             const step = steps[i];
+
+            // Breakpoint check (Phase 4 Pausing)
+            if (executionState.breakpoints.includes(step.id)) {
+              ws.send(JSON.stringify({ type: 'pause', stepId: step.id }));
+              await new Promise((resolve) => {
+                executionState.resolveResume = resolve;
+              });
+              executionState.resolveResume = null;
+            }
+
             ws.send(JSON.stringify({ type: 'step_start', jobId, stepId: step.id }));
 
             if (step.uses) {
@@ -290,6 +302,11 @@ wss.on('connection', (ws) => {
             activeExecutions.delete(ws);
           });
         });
+      } else if (data.type === 'resume') {
+        const execution = activeExecutions.get(ws);
+        if (execution && execution.resolveResume) {
+          execution.resolveResume();
+        }
       }
     } catch (err) {
       console.error('WebSocket message parsing error:', err);
