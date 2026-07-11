@@ -304,3 +304,56 @@ h2, h3 {
   border-color: #f38ba8;
   background-color: #f38ba8;
 }
+
+/* Continue button styling (Phase 4) */
+.btn-continue {
+  padding: 8px 12px;
+  background-color: #a6e3a1;
+  color: #11111b;
+  border: none;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-continue:hover {
+  opacity: 0.9;
+}
+
+/* Terminal Input styling (Phase 4) */
+.terminal-input-wrapper {
+  display: flex;
+  align-items: center;
+  background-color: #11111b;
+  border: 1px solid #313244;
+  border-top: none;
+  padding: 10px 15px;
+  border-bottom-left-radius: 4px;
+  border-bottom-right-radius: 4px;
+}
+
+.terminal-input-wrapper .prompt {
+  color: #f9e2af;
+  font-family: monospace;
+  font-weight: bold;
+  margin-right: 10px;
+  user-select: none;
+}
+
+#terminalInput {
+  flex-grow: 1;
+  background: transparent;
+  border: none;
+  color: #a6e3a1;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 13px;
+  outline: none;
+}
+
+/* Border radius override when input is visible */
+.terminal-container:has(.terminal-input-wrapper:not([style*="display: none"])) #logsTerminal {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}

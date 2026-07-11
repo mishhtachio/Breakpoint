@@ -22,6 +22,9 @@ const showAllLogsBtn = document.getElementById('showAllLogsBtn');
 const runStepBtn = document.getElementById('runStepBtn');
 const runUntilBtn = document.getElementById('runUntilBtn');
 const runFromBtn = document.getElementById('runFromBtn');
+const continueBtn = document.getElementById('continueBtn');
+const terminalInputWrapper = document.getElementById('terminalInputWrapper');
+const terminalInput = document.getElementById('terminalInput');
 
 // Initial setup
 window.addEventListener('DOMContentLoaded', async () => {
@@ -348,6 +351,32 @@ function startJobExecution(runMode = 'all') {
           }
           break;
 
+        case 'pause':
+          combinedLogs += `\n[LocalRunner] Breakpoint hit! Execution paused before step: ${msg.stepId}\n`;
+          stepLogs[msg.stepId] = (stepLogs[msg.stepId] || '') + `\n[LocalRunner] Breakpoint hit! Execution paused. Live terminal is active below.\n`;
+          updateLogsView();
+          
+          // Update badge
+          const pauseBadge = document.getElementById(`step-badge-${msg.stepId}`);
+          if (pauseBadge) {
+            pauseBadge.className = 'step-badge badge-running';
+          }
+          
+          // Show debugger UI
+          continueBtn.style.display = 'inline-block';
+          terminalInputWrapper.style.display = 'flex';
+          terminalInput.value = '';
+          terminalInput.removeAttribute('disabled');
+          terminalInput.focus();
+          break;
+
+        case 'cmd_end':
+          // Re-enable terminal input when command finishes
+          terminalInput.removeAttribute('disabled');
+          terminalInput.value = '';
+          terminalInput.focus();
+          break;
+
         case 'job_end':
           combinedLogs += `\n[LocalRunner] Job finished with status: ${msg.status.toUpperCase()}\n`;
           stepLogs['cleanup'] = (stepLogs['cleanup'] || '') + `\n[LocalRunner] Job finished with status: ${msg.status.toUpperCase()}\n`;
@@ -385,6 +414,37 @@ runStepBtn.addEventListener('click', () => startJobExecution('step'));
 runUntilBtn.addEventListener('click', () => startJobExecution('until'));
 runFromBtn.addEventListener('click', () => startJobExecution('from'));
 
+// Debugger event listeners (Phase 4)
+continueBtn.addEventListener('click', () => {
+  if (ws) {
+    ws.send(JSON.stringify({ type: 'resume' }));
+    continueBtn.style.display = 'none';
+    terminalInputWrapper.style.display = 'none';
+  }
+});
+
+terminalInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') {
+    const cmd = terminalInput.value.trim();
+    if (!cmd) return;
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      // Echo command locally in logs
+      const targetId = activeFilterStepId || 'setup';
+      const echoStr = `$ ${cmd}\n`;
+      stepLogs[targetId] = (stepLogs[targetId] || '') + echoStr;
+      combinedLogs += echoStr;
+      updateLogsView(targetId);
+
+      // Disable input while executing
+      terminalInput.setAttribute('disabled', 'true');
+
+      // Send command to backend
+      ws.send(JSON.stringify({ type: 'exec_cmd', cmd: cmd }));
+    }
+  }
+});
+
 function cleanupRun() {
   runJobBtn.removeAttribute('disabled');
   
@@ -395,6 +455,12 @@ function cleanupRun() {
     runFromBtn.removeAttribute('disabled');
   }
   
+  // Hide debugger UI elements
+  continueBtn.style.display = 'none';
+  terminalInputWrapper.style.display = 'none';
+  terminalInput.value = '';
+  terminalInput.removeAttribute('disabled');
+
   repoPathInput.removeAttribute('disabled');
   loadWorkflowsBtn.removeAttribute('disabled');
   if (ws) {

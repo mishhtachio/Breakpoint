@@ -38,6 +38,7 @@
         <button id="runStepBtn" class="btn-secondary" disabled>Run Step Only</button>
         <button id="runUntilBtn" class="btn-secondary" disabled>Run Until Here</button>
         <button id="runFromBtn" class="btn-secondary" disabled>Run From Here</button>
+        <button id="continueBtn" class="btn-continue" style="display: none;">Continue</button>
       </div>
 
       <!-- Steps status list -->
@@ -55,6 +56,11 @@
           <button id="showAllLogsBtn" class="btn-small">Show All Logs</button>
         </div>
         <pre id="logsTerminal">Logs will stream here in real time...</pre>
+        <!-- Terminal Input Wrapper (Phase 4) -->
+        <div id="terminalInputWrapper" class="terminal-input-wrapper" style="display: none;">
+          <span class="prompt">$</span>
+          <input type="text" id="terminalInput" placeholder="Type command and press Enter to execute inside container..." autocomplete="off" />
+        </div>
       </div>
     </section>
   </main>
