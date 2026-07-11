@@ -49,6 +49,24 @@
         </ul>
       </div>
 
+      <!-- Debugger Control Panel (Phase 5) -->
+      <div id="debugPanel" class="debug-panel" style="display: none;">
+        <div class="debug-panel-header">
+          <h3 id="debugStepTitle">Paused before step</h3>
+        </div>
+        <div class="debug-command-box">
+          <label for="debugCommandInput">Command:</label>
+          <textarea id="debugCommandInput" readonly placeholder="No command available..."></textarea>
+        </div>
+        <div class="debug-actions">
+          <button id="editCmdBtn" class="btn-debug">Edit Command</button>
+          <button id="retryCmdBtn" class="btn-debug btn-debug-primary" disabled>Retry Step</button>
+          <button id="toggleShellBtn" class="btn-debug btn-debug-accent">Open Shell</button>
+          <button id="viewEnvBtn" class="btn-debug">View Env</button>
+          <button id="viewFilesBtn" class="btn-debug">View Files</button>
+        </div>
+      </div>
+
       <!-- Live Logs Terminal -->
       <div class="terminal-container">
         <div class="terminal-header">

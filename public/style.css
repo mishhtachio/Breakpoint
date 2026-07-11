@@ -357,3 +357,89 @@ h2, h3 {
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
 }
+
+/* Debugger Control Panel (Phase 5) */
+.debug-panel {
+  background-color: #313244;
+  border: 1px solid #45475a;
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.debug-panel-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 15px;
+  color: #f9e2af;
+}
+
+.debug-command-box {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.debug-command-box label {
+  font-size: 12px;
+  font-weight: bold;
+  color: #bac2de;
+}
+
+#debugCommandInput {
+  background-color: #181825;
+  color: #cdd6f4;
+  border: 1px solid #45475a;
+  border-radius: 4px;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 13px;
+  height: 50px;
+  resize: none;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#debugCommandInput:not([readonly]) {
+  border-color: #b4befe;
+}
+
+.debug-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-debug {
+  padding: 6px 12px;
+  background-color: #45475a;
+  color: #cdd6f4;
+  border: none;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.btn-debug:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.btn-debug:disabled {
+  background-color: #1e1e2e;
+  color: #585b70;
+  cursor: not-allowed;
+}
+
+.btn-debug-primary {
+  background-color: #a6e3a1;
+  color: #11111b;
+  font-weight: bold;
+}
+
+.btn-debug-accent {
+  background-color: #fab387;
+  color: #11111b;
+  font-weight: bold;
+}
