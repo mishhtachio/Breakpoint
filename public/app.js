@@ -7,6 +7,7 @@ let stepLogs = {};
 let combinedLogs = '';
 let activeFilterStepId = null;
 let activeBreakpoints = new Set();
+let activePausedStepId = null;
 
 // UI Elements
 const repoPathInput = document.getElementById('repoPathInput');
@@ -378,6 +379,7 @@ function startJobExecution(runMode = 'all') {
           terminalInput.focus();
 
           // Populate Debug Panel (Phase 5)
+          activePausedStepId = msg.stepId;
           const currentStep = selectedJob.steps.find(s => s.id === msg.stepId);
           if (currentStep) {
             debugStepTitle.textContent = `Paused before step: ${currentStep.name}`;
@@ -401,6 +403,27 @@ function startJobExecution(runMode = 'all') {
           terminalInput.removeAttribute('disabled');
           terminalInput.value = '';
           terminalInput.focus();
+          break;
+
+        case 'retry_end':
+          // Re-enable debug buttons
+          editCmdBtn.removeAttribute('disabled');
+          toggleShellBtn.removeAttribute('disabled');
+          viewEnvBtn.removeAttribute('disabled');
+          viewFilesBtn.removeAttribute('disabled');
+          continueBtn.removeAttribute('disabled');
+          
+          if (msg.status === 'success') {
+            // Hide debugging UI
+            debugPanel.style.display = 'none';
+            continueBtn.style.display = 'none';
+            terminalInputWrapper.style.display = 'none';
+          } else {
+            // Keep panel open, allow editing/retrying again
+            editCmdBtn.textContent = 'Edit Command';
+            debugCommandInput.setAttribute('readonly', 'true');
+            retryCmdBtn.setAttribute('disabled', 'true');
+          }
           break;
 
         case 'job_end':
@@ -440,13 +463,84 @@ runStepBtn.addEventListener('click', () => startJobExecution('step'));
 runUntilBtn.addEventListener('click', () => startJobExecution('until'));
 runFromBtn.addEventListener('click', () => startJobExecution('from'));
 
-// Debugger event listeners (Phase 4)
+// Debugger event listeners (Phase 4 & 5)
 continueBtn.addEventListener('click', () => {
   if (ws) {
     ws.send(JSON.stringify({ type: 'resume' }));
     continueBtn.style.display = 'none';
     terminalInputWrapper.style.display = 'none';
+    debugPanel.style.display = 'none';
   }
+});
+
+toggleShellBtn.addEventListener('click', () => {
+  if (terminalInputWrapper.style.display === 'none' || !terminalInputWrapper.style.display) {
+    terminalInputWrapper.style.display = 'flex';
+    terminalInput.focus();
+  } else {
+    terminalInputWrapper.style.display = 'none';
+  }
+});
+
+viewEnvBtn.addEventListener('click', () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const targetId = activePausedStepId || 'setup';
+    const echoStr = `$ env\n`;
+    stepLogs[targetId] = (stepLogs[targetId] || '') + echoStr;
+    combinedLogs += echoStr;
+    updateLogsView(targetId);
+
+    ws.send(JSON.stringify({ type: 'exec_cmd', cmd: 'env' }));
+  }
+});
+
+viewFilesBtn.addEventListener('click', () => {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    const targetId = activePausedStepId || 'setup';
+    const echoStr = `$ ls -la\n`;
+    stepLogs[targetId] = (stepLogs[targetId] || '') + echoStr;
+    combinedLogs += echoStr;
+    updateLogsView(targetId);
+
+    ws.send(JSON.stringify({ type: 'exec_cmd', cmd: 'ls -la' }));
+  }
+});
+
+editCmdBtn.addEventListener('click', () => {
+  if (debugCommandInput.hasAttribute('readonly')) {
+    debugCommandInput.removeAttribute('readonly');
+    editCmdBtn.textContent = 'Cancel';
+    retryCmdBtn.removeAttribute('disabled');
+    debugCommandInput.focus();
+  } else {
+    debugCommandInput.setAttribute('readonly', 'true');
+    editCmdBtn.textContent = 'Edit Command';
+    retryCmdBtn.setAttribute('disabled', 'true');
+    if (activePausedStepId && selectedJob) {
+      const currentStep = selectedJob.steps.find(s => s.id === activePausedStepId);
+      if (currentStep) {
+        debugCommandInput.value = currentStep.run || '';
+      }
+    }
+  }
+});
+
+retryCmdBtn.addEventListener('click', () => {
+  const cmd = debugCommandInput.value.trim();
+  if (!cmd || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+  // Disable buttons during execution
+  editCmdBtn.setAttribute('disabled', 'true');
+  retryCmdBtn.setAttribute('disabled', 'true');
+  toggleShellBtn.setAttribute('disabled', 'true');
+  viewEnvBtn.setAttribute('disabled', 'true');
+  viewFilesBtn.setAttribute('disabled', 'true');
+  continueBtn.setAttribute('disabled', 'true');
+
+  ws.send(JSON.stringify({
+    type: 'retry_step',
+    cmd: cmd
+  }));
 });
 
 terminalInput.addEventListener('keydown', (e) => {
@@ -456,7 +550,7 @@ terminalInput.addEventListener('keydown', (e) => {
 
     if (ws && ws.readyState === WebSocket.OPEN) {
       // Echo command locally in logs
-      const targetId = activeFilterStepId || 'setup';
+      const targetId = activePausedStepId || 'setup';
       const echoStr = `$ ${cmd}\n`;
       stepLogs[targetId] = (stepLogs[targetId] || '') + echoStr;
       combinedLogs += echoStr;
@@ -493,6 +587,13 @@ function cleanupRun() {
   debugCommandInput.setAttribute('readonly', 'true');
   editCmdBtn.setAttribute('disabled', 'true');
   retryCmdBtn.setAttribute('disabled', 'true');
+  
+  editCmdBtn.textContent = 'Edit Command';
+  activePausedStepId = null;
+  toggleShellBtn.removeAttribute('disabled');
+  viewEnvBtn.removeAttribute('disabled');
+  viewFilesBtn.removeAttribute('disabled');
+  continueBtn.removeAttribute('disabled');
 
   repoPathInput.removeAttribute('disabled');
   loadWorkflowsBtn.removeAttribute('disabled');
