@@ -25,6 +25,14 @@ const runFromBtn = document.getElementById('runFromBtn');
 const continueBtn = document.getElementById('continueBtn');
 const terminalInputWrapper = document.getElementById('terminalInputWrapper');
 const terminalInput = document.getElementById('terminalInput');
+const debugPanel = document.getElementById('debugPanel');
+const debugStepTitle = document.getElementById('debugStepTitle');
+const debugCommandInput = document.getElementById('debugCommandInput');
+const editCmdBtn = document.getElementById('editCmdBtn');
+const retryCmdBtn = document.getElementById('retryCmdBtn');
+const toggleShellBtn = document.getElementById('toggleShellBtn');
+const viewEnvBtn = document.getElementById('viewEnvBtn');
+const viewFilesBtn = document.getElementById('viewFilesBtn');
 
 // Initial setup
 window.addEventListener('DOMContentLoaded', async () => {
@@ -368,6 +376,24 @@ function startJobExecution(runMode = 'all') {
           terminalInput.value = '';
           terminalInput.removeAttribute('disabled');
           terminalInput.focus();
+
+          // Populate Debug Panel (Phase 5)
+          const currentStep = selectedJob.steps.find(s => s.id === msg.stepId);
+          if (currentStep) {
+            debugStepTitle.textContent = `Paused before step: ${currentStep.name}`;
+            if (currentStep.run) {
+              debugCommandInput.value = currentStep.run;
+              debugCommandInput.setAttribute('readonly', 'true'); // Start read-only until Edit is clicked
+              editCmdBtn.removeAttribute('disabled');
+              retryCmdBtn.setAttribute('disabled', 'true');
+            } else {
+              debugCommandInput.value = currentStep.uses ? `uses: ${currentStep.uses}` : 'No run command or action defined.';
+              debugCommandInput.setAttribute('readonly', 'true');
+              editCmdBtn.setAttribute('disabled', 'true');
+              retryCmdBtn.setAttribute('disabled', 'true');
+            }
+            debugPanel.style.display = 'block';
+          }
           break;
 
         case 'cmd_end':
@@ -460,6 +486,13 @@ function cleanupRun() {
   terminalInputWrapper.style.display = 'none';
   terminalInput.value = '';
   terminalInput.removeAttribute('disabled');
+  
+  // Hide debug panel UI
+  debugPanel.style.display = 'none';
+  debugCommandInput.value = '';
+  debugCommandInput.setAttribute('readonly', 'true');
+  editCmdBtn.setAttribute('disabled', 'true');
+  retryCmdBtn.setAttribute('disabled', 'true');
 
   repoPathInput.removeAttribute('disabled');
   loadWorkflowsBtn.removeAttribute('disabled');
